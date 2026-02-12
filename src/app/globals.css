@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --color-tropical-mint: #23F0C7;
+  --color-light-coral: #EF767A;
+  --color-soft-periwinkle: #7D7ABC;
+  --color-mustard: #FFE347;
 }
 
 @theme inline {
@@ -10,6 +14,26 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-chillax: 'Chillax Regular', sans-serif, Arial;
+  --font-chillax-semibold: 'Chillax Semibold', sans-serif, Arial;
+}
+
+@font-face{
+  font-family: 'Chillax Regular';
+  src: url('/fonts/Chillax-Regular.woff2') format('woff2'),
+       url('/fonts/Chillax-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face{
+  font-family: 'Chillax Semibold';
+  src: url('/fonts/Chillax-Semibold.woff2') format('woff2'),
+       url('/fonts/Chillax-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
 }
 
 @media (prefers-color-scheme: dark) {
