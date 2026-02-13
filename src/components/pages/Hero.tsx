@@ -13,7 +13,7 @@ export default function Hero() {
     }
 
     return (
-        <section className="w-full min-h-screen px-[5vw] py-[5vh] bg-[radial-linear(circle_at_center,#191629,#141121)] overflow-x-hidden">
+        <section className="w-full min-h-screen px-[5vw] py-[5vh] bg-[radial-gradient(circle_at_center,#191629,#141121)] overflow-x-hidden">
             <Header />
             
             {/* Hero Content */}
