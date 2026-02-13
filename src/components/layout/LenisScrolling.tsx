@@ -16,20 +16,13 @@ export default function LenisScrolling({
 
   useEffect(() => {
     const lenis = lenisRef.current?.lenis;
-
     if (!lenis) return;
 
+    // Sync Lenis scroll with ScrollTrigger
     lenis.on("scroll", ScrollTrigger.update);
 
-    const update = (time: number) => {
-      lenis.raf(time * 1000);
-    };
-
-    gsap.ticker.add(update);
-    gsap.ticker.lagSmoothing(0);
-
+    // Cleanup
     return () => {
-      gsap.ticker.remove(update);
       lenis.destroy();
     };
   }, []);
@@ -40,8 +33,14 @@ export default function LenisScrolling({
       ref={lenisRef}
       options={{
         duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: "vertical",
+        gestureOrientation: "vertical",
         smoothWheel: true,
-        autoRaf: false,
+        wheelMultiplier: 1,
+        touchMultiplier: 2,
+        infinite: false,
+        autoRaf: true,
       }}
     >
       {children}
