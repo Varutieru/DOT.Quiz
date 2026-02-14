@@ -21,14 +21,14 @@ export interface ProcessedQuestion {
   difficulty: string;
   question: string;
   correctAnswer: string;
-  allAnswers: string[]; // Shuffled answers
+  allAnswers: string[];
 }
 
 export interface QuizAnswer {
   questionId: string;
   selectedAnswer: string;
   isCorrect: boolean;
-  timeSpent: number; // in seconds
+  timeSpent: number;
 }
 
 export interface QuizState {
@@ -36,7 +36,7 @@ export interface QuizState {
   currentQuestionIndex: number;
   answers: QuizAnswer[];
   startTime: number;
-  timeLimit: number; // in seconds
+  timeLimit: number;
   isFinished: boolean;
 }
 
@@ -46,7 +46,7 @@ export interface QuizResult {
   incorrectAnswers: number;
   unansweredQuestions: number;
   totalTimeSpent: number;
-  score: number; // percentage
+  score: number;
 }
 
 export interface SavedQuizProgress extends QuizState {

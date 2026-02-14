@@ -12,7 +12,7 @@ const STORAGE_KEY = 'quiz_progress';
 
 interface UseQuizProps {
   questions: ProcessedQuestion[];
-  timeLimit: number;
+  timeLimit: number; // in seconds
   onQuizComplete?: (result: QuizResult) => void;
 }
 
@@ -28,48 +28,65 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
   });
 
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
+  const [isResumed, setIsResumed] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  /* Load saved progress from localStorage */
+  // Load saved progress from localStorage - ONLY ON MOUNT
   useEffect(() => {
-    if (user) {
-      const savedProgress = localStorage.getItem(STORAGE_KEY);
-      if (savedProgress) {
-        try {
-          const parsed: SavedQuizProgress = JSON.parse(savedProgress);
-          
-          if (parsed.userId === user.id) {
-            const timePassed = Math.floor((Date.now() - parsed.startTime) / 1000);
-            const newTimeRemaining = Math.max(0, parsed.timeLimit - timePassed);
-            
-            if (newTimeRemaining > 0 && !parsed.isFinished) {
-              setQuizState(parsed);
-              setTimeRemaining(newTimeRemaining);
-              
-              console.log('Quiz resumed from saved progress');
-            } else {
-              localStorage.removeItem(STORAGE_KEY);
-            }
-          }
-        } catch (error) {
-          console.error('Error loading saved quiz:', error);
-          localStorage.removeItem(STORAGE_KEY);
-        }
+    if (!user) return;
+
+    const savedProgress = localStorage.getItem(STORAGE_KEY);
+    if (!savedProgress) return;
+
+    try {
+      const parsed: SavedQuizProgress = JSON.parse(savedProgress);
+      
+      // Check if saved quiz is for current user
+      if (parsed.userId !== user.id) {
+        console.log('Saved quiz is for different user, ignoring');
+        return;
       }
+
+      // Calculate how much time has passed
+      const timePassed = Math.floor((Date.now() - parsed.startTime) / 1000);
+      const newTimeRemaining = Math.max(0, parsed.timeLimit - timePassed);
+      
+      // Only resume if there's time left and quiz not finished
+      if (newTimeRemaining > 0 && !parsed.isFinished && parsed.questions.length > 0) {
+        console.log('Resuming quiz from saved progress');
+        console.log('Time remaining:', newTimeRemaining);
+        console.log('Current question:', parsed.currentQuestionIndex + 1);
+        
+        setQuizState(parsed);
+        setTimeRemaining(newTimeRemaining);
+        setIsResumed(true);
+      } else {
+        console.log('Saved quiz expired or finished, clearing');
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error('Error loading saved quiz:', error);
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, [user]);
 
-  const saveProgress = useCallback(() => {
-    if (user && !quizState.isFinished) {
-      const progressToSave: SavedQuizProgress = {
-        ...quizState,
-        userId: user.id,
-        savedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(progressToSave));
+  // Save progress to localStorage
+  useEffect(() => {
+    if (!user || quizState.isFinished || quizState.questions.length === 0) {
+      return;
     }
+
+    const progressToSave: SavedQuizProgress = {
+      ...quizState,
+      userId: user.id,
+      savedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progressToSave));
+    console.log('Quiz progress saved');
   }, [quizState, user]);
 
+  // Timer logic
   useEffect(() => {
     if (quizState.isFinished) {
       if (timerRef.current) {
@@ -94,10 +111,6 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
       }
     };
   }, [quizState.isFinished]);
-
-  useEffect(() => {
-    saveProgress();
-  }, [quizState, saveProgress]);
 
   const answerQuestion = useCallback((selectedAnswer: string) => {
     const currentQuestion = quizState.questions[quizState.currentQuestionIndex];
@@ -126,6 +139,7 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
     }
   }, [quizState, timeRemaining, timeLimit]);
 
+  // Calculate result
   const calculateResult = useCallback((answers: QuizAnswer[]): QuizResult => {
     const correctAnswers = answers.filter(a => a.isCorrect).length;
     const incorrectAnswers = answers.filter(a => !a.isCorrect).length;
@@ -144,6 +158,7 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
     };
   }, [quizState.questions, timeLimit, timeRemaining]);
 
+  // Finish quiz
   const finishQuiz = useCallback((finalAnswers?: QuizAnswer[]) => {
     const answersToUse = finalAnswers || quizState.answers;
     
@@ -152,11 +167,14 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
       isFinished: true,
     }));
 
+    // Clear timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
 
+    // Clear saved progress
     localStorage.removeItem(STORAGE_KEY);
+    console.log('Quiz finished, progress cleared');
 
     const result = calculateResult(answersToUse);
     
@@ -167,6 +185,7 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
     return result;
   }, [quizState.answers, calculateResult, onQuizComplete]);
 
+  // Reset quiz
   const resetQuiz = useCallback(() => {
     setQuizState({
       questions,
@@ -177,9 +196,12 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
       isFinished: false,
     });
     setTimeRemaining(timeLimit);
+    setIsResumed(false);
     localStorage.removeItem(STORAGE_KEY);
+    console.log('Quiz reset');
   }, [questions, timeLimit]);
 
+  // Time Display (MM:SS)
   const formatTime = useCallback((seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -187,6 +209,7 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
   }, []);
 
   return {
+    // State
     currentQuestion: quizState.questions[quizState.currentQuestionIndex],
     currentQuestionIndex: quizState.currentQuestionIndex,
     totalQuestions: quizState.questions.length,
@@ -194,11 +217,14 @@ export function useQuiz({ questions, timeLimit, onQuizComplete }: UseQuizProps) 
     isFinished: quizState.isFinished,
     timeRemaining,
     formattedTime: formatTime(timeRemaining),
+    isResumed, // New: indicates if quiz was resumed
     
+    // Actions
     answerQuestion,
     finishQuiz,
     resetQuiz,
     
+    // Helpers
     progress: quizState.questions.length > 0 
       ? Math.round(((quizState.currentQuestionIndex + 1) / quizState.questions.length) * 100)
       : 0,
